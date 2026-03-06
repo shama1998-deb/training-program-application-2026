@@ -40,6 +40,41 @@
 # Prepare/combine the data for plotting ------------------------
 # How can you combine this data into one data.frame?
 
+ read_csv("GSE60450_filtered_metadata.csv")
+
+data <- read_csv("GSE60450_GeneLevel_Normalized(CPM.and.TMM)_data.csv")
+dim(metadata)
+dim(data)
+expr <- data[, -c(1,2)]
+expr$gene_symbol <- data$`gene_symbol`
+
+library(tidyr)
+expr_long <- pivot_longer(expr,
+                          cols = -gene_symbol,
+                          names_to = "sample",
+                          values_to = "expression")
+
+metadata$sample <- rownames(metadata)
+
+combined_data <- merge(expr_long, metadata, by = "sample")
+
+# Make sure cell_type is a factor
+combined_data$cell_type <- as.factor(combined_data$cell_type)
+
+
+library(ggplot2)
+
+
+p<-ggplot(combined_data, aes(x = cell_type, y = expression)) +
+  geom_boxplot(fill = "skyblue", color = "darkblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Gene Expression by Cell Type",
+       x = "Cell Type",
+       y = "Expression")
+print(p)
+
+ggplot(mtcars, aes(x = factor(cyl), y= mpg))+ geom_boxplot()
 
 
 # Plot the data --------------------------
@@ -50,3 +85,8 @@
 
 ## Save the plot
 ### Show code for saving the plot with ggsave() or a similar function
+ggsave("results/gene_expression_boxplot.png",
+       plot = p,
+       width = 8,
+       height = 6,
+       dpi = 300)
