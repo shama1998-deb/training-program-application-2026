@@ -20,10 +20,16 @@
 # You may use base R or tidyverse for this exercise
 
 # ex. library(tidyverse)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
 
 # Load data here ----------------------
 # Load each file with a meaningful variable name.
+metadata <- read_csv("GSE60450_filtered_metadata.csv")
 
+data <- read_csv("GSE60450_GeneLevel_Normalized(CPM.and.TMM)_data.csv")
 
 
 # Inspect the data -------------------------
@@ -33,20 +39,52 @@
 
 ## Expression data
 
-
+dim(metadata)
+dim(data)
 ## Metadata
 
 
 # Prepare/combine the data for plotting ------------------------
 # How can you combine this data into one data.frame?
 
+expr <- data[, -c(1,2)]
+expr$gene_symbol <- data$`gene_symbol`
+expr_long <- pivot_longer(expr,
+                          cols = -gene_symbol,
+                          names_to = "sample",
+                          values_to = "expression")
 
+metadata$sample <- rownames(metadata)
+metadata$sample <- metadata$...1
+metadata$cell_type <- metadata$immunophenotype  # rename to match plot
+
+combined_data <- left_join(expr_long, metadata, by = "sample")
+combined_data$cell_type <- as.factor(combined_data$cell_type)
 
 # Plot the data --------------------------
 ## Plot the expression by cell type
 ## Can use boxplot() or geom_boxplot() in ggplot2
 
-
+p <- ggplot(combined_data, aes(x = cell_type, y = expression)) +
+  geom_boxplot(fill = "skyblue", color = "darkblue", outlier.color = "red", outlier.shape = 16) +
+  theme_minimal(base_size = 14) +                          # clean theme
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),    # tilt x labels
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16), # center title
+    panel.border = element_rect(color = "black", fill = NA, size = 1), # add border around panel
+    panel.grid.major = element_line(color = "grey90"),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(
+    title = "Gene Expression by Cell Type", 
+    x = "Cell Type", 
+    y = "Expression"
+  )
+p
 
 ## Save the plot
 ### Show code for saving the plot with ggsave() or a similar function
+ggsave("gene_expression_boxplot.pdf",  # PDF file
+       plot = p,
+       width = 9,
+       height = 6)
